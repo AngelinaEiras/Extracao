@@ -126,7 +126,8 @@ heatmap(exprs(data20), Colv = NA, labCol = data20$cell.type)
 ```{r}
 
 
+
 ```
 
-
+####### Fim de clustering de genes e/ou amostras #######
 
