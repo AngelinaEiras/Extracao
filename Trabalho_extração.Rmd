@@ -1,40 +1,95 @@
 ---
-title: "Trabalho extração"
-output: html_document
+title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
+author: Angelina Eiras - PG42861, Beatriz Silva - PG, Mariana Gonçalves - PG, Quitéria Pinheiro - PG
+date: 30/05/22
+output: html_notebook
+# output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Carregamento dos packages
+# Explicação dos dados, a sua origem e relevância
 
-```{r}
-library(Biobase)
-library(GEOquery)
-```
+...
 
-Obtenção dos dados
+
+## Obtenção dos dados
 
 ```{r}
 GDS5826 <- getGEO('GDS5826', destdir=".")
 
 ```
 
+## Obtenção de packages do BioConductor
+
+```{r package_installation, eval = FALSE, message=FALSE, results='hide'}
+if (!requireNamespace("BiocManager", quietly = TRUE) )
+  install.packages("BiocManager")
+  BiocManager::install()
+BiocManager::install("Biobase", force = TRUE)
+BiocManager::install("genefilter", force = TRUE)
+BiocManager::install("org.Hs.eg.db", force = TRUE)
+BiocManager::install("DESeq2", force = TRUE)
+BiocManager::install("fgsea", force = TRUE)
+BiocManager::install("limma", force = TRUE)
+BiocManager::install("ALL", force = TRUE)
+```
+
+## Carregamento de packages
+
+```{r package_loading, message=FALSE, results='hide'}
+library(car)
+library(readr)
+library(summarytools)
+library(limma)
+library(Biobase)
+library(genefilter)
+library(dplyr)
+library(org.Hs.eg.db)
+library(DESeq2)
+library(pheatmap)
+library(fgsea)
+library(ggplot2)
+library(ALL)
+library(Rtsne)
+library(class)
+library(e1071)
+library(party)
+library(nnet)
+library(randomForest)
+library(data.table)
+library(caret)
+```
+
+
+# Pré-processamento dos dados
+
+...
 
 ```{r}
-sum(is.na(GDS5826))
+sum(is.na(GDS5826)) # soma o numero de NAs
+
+# r <- data.frame(sapply(GDS5826, function(x) sum(is.na(x))))
+# sum(!!r) # Colunas com NAs
+# não tem NAs
+
 
 data = GDS2eSet(GDS5826)
 dim(data)
 class(data)
+
+Meta(GDS5826)
 ```
-Metadados
+## Metadados
+
 ```{r}
 Meta(GDS5826)$channel_count
 Meta(GDS5826)$description
 Meta(GDS5826)$feature_count
 Meta(GDS5826)$platform
+Meta(GDS5826)$sample_id
 Meta(GDS5826)$sample_count
 Meta(GDS5826)$sample_organism
 Meta(GDS5826)$sample_type
@@ -45,7 +100,7 @@ Meta(GDS5826)$type
 
 
 ```{r}
-library(genefilter)
+
 exp = exprs(data)
 sds = rowSds(exp)
 sum(is.na(sds))
@@ -64,6 +119,7 @@ datar
 
 
 ```{r}
+
 maximos = apply(exp,1,max)
 minimos = apply(exp,1,min)
 vl = maximos/minimos > 2
@@ -87,7 +143,7 @@ Analise diferencial
 datar$cell.type= factor(datar$cell.type)
 table(datar$cell.type)
 
-library(genefilter)
+
 tt = rowttests(datar, "cell.type")
 names(tt)
 x=tt$p.value
@@ -123,8 +179,30 @@ heatmap(exprs(data20), Colv = NA, labCol = data20$cell.type)
 
 
 ####### clustering de genes e/ou amostras #######
+
+# Clustering e outros métodos não supervisionados
+
+## Redução de dimensionalidade
+
+### PCA
+
+...
+
 ```{r}
 
+cell_line_type = rbind(data20$cell.line, data20$cell.type)
+
+pca = prcomp(cell_line_type)
+min(which(summary(pca)$importance[3,]>0.8))
+
+cell_line_type$lineage = 0
+cell_line_type$lineage[1:length(data20$cell.line[])] = "solido"
+cell_line_type$lineage[length(data20$cell.line[])+1:length(data20$cell.type[])] = "liquido"
+cell_line_type$lineage = as.factor(cell_line_type$lineage)
+
+# Tentar criar grupos de cores pela classificação liquido / solido
+
+pairs(pca$x[], pch=18, main = "Gráficos de dispersão múltiplos", col=cell_line_type$lineage)
 
 
 ```
