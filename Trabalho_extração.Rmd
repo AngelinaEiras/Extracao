@@ -204,7 +204,7 @@ cell_line_type$lineage = as.factor(cell_line_type$lineage)
 
 pairs(pca$x[], pch=18, main = "Gráficos de dispersão múltiplos", col=cell_line_type$lineage)
 
-
+Isto é uma experiência
 ```
 
 ####### Fim de clustering de genes e/ou amostras #######
