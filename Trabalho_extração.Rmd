@@ -148,12 +148,10 @@ heatmap(exprs(data20), Colv = NA, labCol = data20$cell.type)
 ##Enriquecimento
 
 ```{r}
-library(GOstats)
-library("Biobase")
+
 filt = nsFilter(datar, require.entrez=T, remove.dupEntrez=T,
 var.func=IQR, var.cutoff=0.5, feature.exclude="^AFFX")
 dataf = filt$eset
-
 
 
 affyUniverse = featureNames(dataf)
