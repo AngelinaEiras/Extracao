@@ -1,6 +1,6 @@
 ---
 title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
-author: Angelina Eiras - PG42861, Beatriz Silva - PG, Mariana Gonçalves - PG, Quitéria Pinheiro - PG
+author: Angelina Eiras - PG42861, Beatriz Silva - PG, Mariana Gonçalves - PG45472, Quitéria Pinheiro - PG
 date: 30/05/22
 output: html_notebook
 # output: html_document
@@ -24,6 +24,7 @@ Os dados extraídos foram 12 amostras totais, das quais 6 são do tipo KMS-11/Cf
 ```{r}
 GDS5826 <- getGEO('GDS5826', destdir=".")
 
+
 ```
 
 ## Obtenção de packages do BioConductor
@@ -34,7 +35,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE) )
   BiocManager::install()
 BiocManager::install("Biobase", force = TRUE)
 BiocManager::install("genefilter", force = TRUE)
-BiocManager::install("org.Hs.eg.db", force = TRUE)
+BiocManager::install("hgu133plus2.db")
 BiocManager::install("DESeq2", force = TRUE)
 BiocManager::install("fgsea", force = TRUE)
 BiocManager::install("limma", force = TRUE)
@@ -66,6 +67,7 @@ library(nnet)
 library(randomForest)
 library(data.table)
 library(caret)
+library(GOstats)
 ```
 
 
@@ -79,25 +81,15 @@ sum(is.na(GDS5826)) # soma o numero de NAs
 data = GDS2eSet(GDS5826)
 dim(data)
 class(data)
-Meta(GDS5826)
 
 ```
 ## Metadados
 
 ```{r}
-Meta(GDS5826)$channel_count
-Meta(GDS5826)$description
-Meta(GDS5826)$feature_count
-Meta(GDS5826)$platform
-Meta(GDS5826)$sample_id
-Meta(GDS5826)$sample_count
-Meta(GDS5826)$sample_organism
-Meta(GDS5826)$sample_type
-Meta(GDS5826)$title
-Meta(GDS5826)$type
+Meta(GDS5826)
 ```
 
-
+##Flat pattens
 
 ```{r}
 
@@ -117,29 +109,10 @@ datar = data[sds >=3*median(sds), ]
 
 
 
-```{r}
-
-maximos = apply(exp,1,max)
-minimos = apply(exp,1,min)
-vl = maximos/minimos > 2
-dataf=datar[vl,]
-dataf
-
-```
-
-
-
-```{r}
-meta = phenoData(datar)
-meta
-varLabels(meta)
-
-```
-
 
 ## Analise diferencial
 ```{r}
-
+datar@annotation='hgu133plus2'
 datar$cell.type= factor(datar$cell.type)
 table(datar$cell.type)
 
@@ -156,8 +129,7 @@ Lista de 20 genes
 ```{r}
 g = featureNames(datar[p20])
 g
-
-#falta poder corresponder o identificador ao nome do gene 
+unlist(mget(g, hgu133plus2SYMBOL))
 ```
 
 Heatmap
@@ -173,8 +145,37 @@ heatmap(exprs(data20), Colv = NA, labCol = data20$cell.type)
 ```
 
 
+##Enriquecimento
+
+```{r}
+library(GOstats)
+library("Biobase")
+filt = nsFilter(datar, require.entrez=T, remove.dupEntrez=T,
+var.func=IQR, var.cutoff=0.5, feature.exclude="^AFFX")
+dataf = filt$eset
 
 
+
+affyUniverse = featureNames(dataf)
+entrezUniverse = unlist(mget(affyUniverse, hgu133plus2ENTREZID ))
+length(entrezUniverse)
+ttests = rowttests(dataf, "cell.type")
+smPV = ttests$p.value < 0.10
+sum(smPV)
+pvalFiltered = dataf[smPV, ]
+selectedEntrezIds = unlist(mget(featureNames(pvalFiltered),
+hgu133plus2ENTREZID))
+
+
+params = new("GOHyperGParams", geneIds=selectedEntrezIds,
+universeGeneIds=entrezUniverse, annotation="hgu133plus2",
+ontology="MF", pvalueCutoff= 0.025, testDirection="over")
+hgOver = hyperGTest(params)
+hgOver
+summary(hgOver)
+
+
+```
 
 
 
