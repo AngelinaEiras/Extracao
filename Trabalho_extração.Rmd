@@ -11,8 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Explicação dos dados, a sua origem e relevância
+Os dados selecionados pelo grupo são provenientes do estudo " Multiple myeloma cell lines with acquired resistance to chemotherapeutic agent carfilzomib " assumindo a designação GDS5826 na base de dados GEO do NCBI.
 
-...
+Este estudo refere-se à análise das linhas de células inibidoras do proteasoma múltiplo resistente ao carfilzomibe (MM) , KMS-11/Cfz e KMS-34/Cfz, após 1 semana de crescimento na ausência do carfilzomibe, juntamente com as células parentais KMS-11 e KMS-34 que não tinham sido seleccionadas no medicamento.
+
+Os dados extraídos foram 12 amostras totais, das quais 6 são do tipo KMS-11/Cfz e 6 do tipo KMS-34/Cfz
+
 
 
 ## Obtenção dos dados
