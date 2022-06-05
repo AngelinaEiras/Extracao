@@ -1,6 +1,6 @@
 ---
 title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
-author: Angelina Eiras - PG42861, Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro - PG
+author: Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro - PG
 date: 30/05/22
 output: html_notebook
 # output: html_document
@@ -17,7 +17,7 @@ Este estudo refere-se à análise das linhas de células inibidoras do proteasom
 
 As células KMS-11 e KMS-34 foram expostas a concentrações crescentes de carfilzomibe por um período total de 18 semanas: células adaptadas ao crescimento em 4 nM carfilzomib em 4 semanas, em 6 nM em mais 6 semanas e em 12 nM após mais 8 semanas. As culturas celulares resultantes, denominadas KMS-11/Cfz e KMS-34/Cfz, respectivamente, mantiveram a resistência ao carfilzomibe, mesmo quando testadas após a remoção da pressão selectiva durante aproximadamente 8 semanas.
 
-Os dados extraídos do dataset foram 12 amostras totais, das quais 6 são do tipo KMS-11/Cfz e 6 do tipo KMS-34/Cfz
+Os dados extraídos do dataset foram 12 amostras totais, das quais 6 são da linhagem de células KMS-11/Cfz e 6 do tipo KMS-34/Cfz.
 
 
 
@@ -73,6 +73,11 @@ library(GOstats)
 ```
 
 
+#Análise Exploratória
+
+
+
+
 # Pré-processamento dos dados
 
 ...
@@ -86,6 +91,7 @@ class(data)
 
 ```
 ## Metadados
+
 
 ```{r}
 Meta(GDS5826)
@@ -126,6 +132,8 @@ rank = order(tt$p.value)
 p20 = rank[1:20]
 tt$p.value[p20]
 ```
+
+
 Lista de 20 genes
 
 ```{r}
