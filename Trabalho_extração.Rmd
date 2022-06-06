@@ -1,9 +1,8 @@
 ---
 title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
 author: Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro - PG
-date: 30/05/22
+date: "30/05/22"
 output: html_notebook
-# output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -11,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Explicação dos dados, a sua origem e relevância
+
 Os dados selecionados são provenientes do estudo " Multiple myeloma cell lines with acquired resistance to chemotherapeutic agent carfilzomib " assumindo a designação GDS5826 na base de dados GEO do NCBI.
 
 Este estudo refere-se à análise das linhas de células inibidoras do proteasoma múltiplo resistente ao carfilzomibe (MM), onde as células KMS-11/Cfz e KMS-34/Cfz foram perfiladas para expressão genética após 1 semana de crescimento na ausência de carfilzomibe juntamente com as células parentais KMS-11 e KMS-34 que não tinham sido seleccionadas no fármaco (amostras triplicadas).
@@ -186,166 +186,70 @@ summary(hgOver)
 ```
 
 
-
-####### clustering de genes e/ou amostras #######
-
-# Clustering
-
-
-### PCA
-
-A reduçção de dimensionálidade pode ser uma estratégia para determiar o número de genes que representam uma certa parte da variação do modelo.
-
+##Analise preditiva
 ```{r}
-solids_and_liquids = rbind(CCLE_expression.solido, CCLE_expression.liquido)
+#Filtragem do conjunto de dados
 
-pca = prcomp(solids_and_liquids)
-min(which(summary(pca)$importance[3,]>0.8))
-
-solids_and_liquids$lineage = 0
-solids_and_liquids$lineage[1:length(CCLE_expression.solido[,1])] = "solido"
-solids_and_liquids$lineage[length(CCLE_expression.solido[,1])+1:length(CCLE_expression.liquido[,1])] = "liquido"
-solids_and_liquids$lineage = as.factor(solids_and_liquids$lineage)
-
-# Tentar criar grupos de cores pela classificação liquido / solido
-
-pairs(pca$x[,1:5], pch=18, main = "Gráficos de dispersão múltiplos", col=solids_and_liquids$lineage)
-```
-
-Neste caso temos que 250 é o número minimo de genes necessários para explicar 80% da variabilidade o dataset de expressão, isto quer dizer que apesar de uma enorme lista de genes (cerca de 20 mil), só uma minoria explica a maior parte da diferença entre os diferentes tipos de cancro. Isto pode em parte indicar que existem.
-Ao mesmo tempo podemos observar que entre os 5 primeiros Principal Componentes, ainda não é possivel observar as diferenças entre os tumores líquidos e sólidos.
-
-
-## Clustering Hierárquico
-
-```{r}
-tt_mdr = rowttests(t(CCLE_expression))
-rank_de_mdr = order(tt_mdr$p.value)
-genes_de_mdr = rank_de_mdr[1:30]
-CCLE_expression_de = CCLE_expression_r[genes_de_mdr,]
-
-eucD = dist(CCLE_expression_de)
-cl.hier <- hclust(eucD)
-plot(cl.hier,xlab="", ylab="Distância", main="Dendograma da expressão dos 30 genes com menor p-value \nmétodo:complete, distância Euclidiana")
-
-cl.hier2 <- hclust(eucD, method="single")
-plot(cl.hier2,xlab="", ylab="Distância", main="Dendograma da expressão dos 30 genes com menor p-value \nmétodo:single, distância Euclidiana")
-
-cl.hier3 <- hclust(eucD, method="average")
-plot(cl.hier3,xlab="", ylab="Distância", main="Dendograma da expressão dos 30 genes com menor p-value \nmétodo:average, distância Euclidiana")
-
-heatmap(CCLE_expression_de, labCol = F, main="Expressão dos 30 genes com menor p-value")
-km = kmeans(CCLE_expression_de, 14, n=1000)
-
-# ENTREZID 292 -> gene mitocondrial responsavel por entrada e saidas de ATPs e ADPs -> oncogene
+design = model.matrix(~datar$cell.type)
+fit = lmFit(datar,design)
+fit2 = eBayes(fit)
+diff = topTable(fit2, coef=2, 100)
+indexes = which(rownames(datar)%in%rownames(diff))
+datacl = datar[indexes,]
 ```
 
 ```{r}
+train = t(exprs(datacl[1:77,]))
+test = t(exprs(datacl[78:100,]))
+dim(train)
+dim(test)
 
-# Cell lines overlaping between the RNASeq and Drug response datasets
-overlap_cells <- intersect(row.names(CCLE_expression), row.names(DRUG_response))
-message(paste(length(overlap_cells), "cell lines overlapping RNASeq and Drug response"))
+head(datacl)
 
-## Test specific association with lineage as covariate
-# Selecionar uma droga em específico
-spdrug<-"BRD-K19687926-379-07-4::2.5::HTS"
-# message(paste(dinfo[spdrug, "name"], dinfo[spdrug, "moa"], dinfo[spdrug, "target"], sep=": "))
-sdrug<-"BRD.K19687926.379.07.4..2.5..HTS"
-# Selecionar um gene em específico
-gene <- "EGFR..1956."
+library(class)
 
-sdrug <- DRUG_response[overlap_cells, sdrug]
-gene <- CCLE_expression[overlap_cells, gene]
+cl=datacl@phenoData@data[["cell.type"]]
+knn_pred = knn(train[,1:6], test[,1:6],cl, k=3)
+knn_pred
+table(knn_pred, cl)
 
-# Covariates
-lineage <- factor(Sample_info[overlap_cells, "lineage"])
-lineage_dummies <- model.matrix( ~ lineage - 1)
-row.names(lineage_dummies) <- overlap_cells
+pecc = sum(knn_pred==cl)/length(cl)
+pecc
 
-# Linear regression with lineage as covariate
-drug_gene_lm_lineage <- lm(sdrug ~ lineage + gene)
-s<-summary(drug_gene_lm_lineage)
-s_results<-data.frame(s$coefficients)
-s_results<-data.frame(s_results[2:21,])
-s_results_d<-subset(s_results, select=c(1))
-md_lineage<-dist(s_results_d, method="euclidean")
-hc_lineage<-hclust(md_lineage, method="average")
-plot(hc_lineage, xlab="", ylab="Distância", main="Dendograma \nmétodo:average, distância Euclidiana")
+
 ```
 
-Por forma a verificar associações entre medicamentos e determinados tecidos, escolhemos um medicamento em específico, "lapatinib", e selecionámos um dos genes que é inibido por este medicamento, "EGFR". De seguida, procurámos por todas as associações entre o medicamento e o gene nas diferentes linhas celulares e realizámos um clustering hierárquico com os resultados das regressões lineares. Pelo dendograma, podemos distinguir dois grupos de tecidos que são mais similares entre si. Apesar de não haver grande distinção, pode-se destacar o facto de os ossos e os tecidos moles, o fígado e o pâncreas são os dois conjuntos de tecidos que têm uma resposta mais semelhante entre si ao medicamento em causa.
-
-## Clustering de Kmeans para determinar o nível de especialização dos fármacos.
 
 ```{r}
+set.seed(1234)
+library(MLInterfaces)
 
-iqrs <- sapply(na.exclude(DRUG_response), IQR)
-best2_index = order(iqrs, decreasing=TRUE)[1:2]
-best2 = iqrs[best2_index]
-names(best2)
-broad_ids = c("BRD-K96259238-001-01-4::2.5::HTS", "BRD-K77908580-001-09-6::2.5::HTS")
-best2_info = dinfo[rownames(dinfo) %in% broad_ids, ]
+nnetResultLOO <- MLearn(cell.type~., datacl, nnetI, xvalSpec("LOO"),
+size=6, decay=0.01)
 
-# Obter as duas drogas mais especializadas
-best_drugs_ks = DRUG_response[ ,names(best2)]
+nnetResultLOO
 
-km = kmeans(na.exclude(best_drugs_ks), 8)
-plot(best_drugs_ks[,1],best_drugs_ks[,2], col=km$cluster, xlab= paste('Effect of', best2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', best2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:15, pch=3, cex=2, lwd=3)
-
-km = kmeans(na.exclude(best_drugs_ks), 8)
-plot(best_drugs_ks[,1],best_drugs_ks[,2], col="white", xlab= paste('Effect of', best2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', best2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:8, pch=3, cex=2, lwd=3)
+testPredictions(nnetResultLOO)
+testScores(nnetResultLOO)
 
 
-names = c(names(which.max(iqrs)), names(which.min(iqrs)))
-
-broad_ids = c("BRD-K96259238-001-01-4::2.5::HTS", "BRD-A42423104-001-01-4::2.495664958::MTS004")
-opp2_info = dinfo[rownames(dinfo) %in% broad_ids, ]
-
-# Obter uma droga especializada vs um com pequena variação
-opp_drugs_ks = DRUG_response[ ,names]
-
-km = kmeans(na.exclude(opp_drugs_ks), 8)
-plot(opp_drugs_ks[,1],opp_drugs_ks[,2], col=km$cluster, xlab= paste('Effect of', opp2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', opp2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:8, pch=3, cex=2, lwd=3)
-
-km = kmeans(na.exclude(opp_drugs_ks), 8)
-plot(opp_drugs_ks[,1],opp_drugs_ks[,2],  col="white", xlab= paste('Effect of', opp2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', opp2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:8, pch=3, cex=2, lwd=3)
-
-
-# Duas drogas aleatórias
-names = c("BRD.K07625016.001.01.2..2.50703254..MTS004","BRD.K29626940.001.01.5..2.682001852..MTS004")
-names2 = c("BRD.K07625016.001.01.2..2.50703254..MTS004","BRD.A25234499.001.18.3..2.5..HTS")
-names3 = c("BRD-K07625016-001-01-2..2.50703254::MTS004","BRD-A25234499-001-18-3::2.5::HTS")
-
-
-random_drugs_ks = DRUG_response[ ,names2]
-random2_info = dinfo[rownames(dinfo) %in% names3, ]
-
-km = kmeans(na.exclude(random_drugs_ks), 8)
-plot(random_drugs_ks[,1],random_drugs_ks[,2], col=km$cluster, xlab= paste('Effect of', random2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', random2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:8, pch=3, cex=2, lwd=3)
-
-km = kmeans(na.exclude(random_drugs_ks), 8)
-plot(random_drugs_ks[,1],random_drugs_ks[,2],  col="white", xlab= paste('Effect of', random2_info[1,'name'], '(PRISM)') , ylab = paste('Effect of', random2_info[2,'name'], '(PRISM)') , pch=19)
-points(km$centers, col=1:8, pch=3, cex=2, lwd=3)
 ```
 
-De forma a tentar perceber se existe possiveis situações de especialização, foram experimentadas 3 tentativas de clustering.
-Uma para duas drogas com grande variação de resultados, isto é, com possivél especialização, uma destas vs uma das com menos variação e duas aleatórias. Em todas as situações quando se tenta agrupar pelo nº de tipos de cancro, vemos que não existe uma agrupamento por estas.
 
-## Clustering de Kmeans para estudar as relações inter-genes
 
 ```{r}
-pontos = c()
-for (k in 2:15) pontos[k] = sum(kmeans(solids_and_liquids[,which(colnames(solids_and_liquids) !="lineage")], centers=k)$withinss)
-plot(2:15, pontos[2:15], type="b", xlab="Número Clusters", ylab="WSS")
-solids_and_liquids.k10 = kmeans(solids_and_liquids[,which(colnames(solids_and_liquids) !="lineage")], centers = 10, nstart = 20)
-table(solids_and_liquids.k10$cluster, solids_and_liquids$lineage)
-```
-Com base nesta análise podemos determinar que com cerca de 10 k centers, podemos ter um ponto de equilibrio entre o nº de k centers e a variabilidade do modelo . Os resultados provam que este ponto é também muito bom a discriminar entre os cancros entre liquidos e sólidos.
+library(caret)
+trContr = trainControl(method = "repeatedcv", number=5, repeats=10)
+arv = train(cell.type ~., data.frame(datacl), method = "rpart",
+trControl = trContr)
 
-####### Fim de clustering de genes e/ou amostras #######
+arv$results$Accuracy
+
+```
+
+
+
+
+
+
 
