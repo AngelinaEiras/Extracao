@@ -26,7 +26,6 @@ Os dados extraídos do dataset foram 12 amostras totais, das quais 6 são da lin
 ```{r}
 GDS5826 <- getGEO('GDS5826', destdir=".")
 
-
 ```
 
 ## Obtenção de packages do BioConductor
@@ -38,38 +37,22 @@ if (!requireNamespace("BiocManager", quietly = TRUE) )
 BiocManager::install("Biobase", force = TRUE)
 BiocManager::install("genefilter", force = TRUE)
 BiocManager::install("hgu133plus2.db")
-BiocManager::install("DESeq2", force = TRUE)
-BiocManager::install("fgsea", force = TRUE)
 BiocManager::install("limma", force = TRUE)
-BiocManager::install("ALL", force = TRUE)
-BiocManager::install("siggenes", force = TRUE)
 ```
 
 ## Carregamento de packages
 
 ```{r package_loading, message=FALSE, results='hide'}
 library(car)
-library(readr)
-library(summarytools)
 library(limma)
 library(Biobase)
 library(genefilter)
 library(dplyr)
-library(org.Hs.eg.db)
-library(DESeq2)
-library(pheatmap)
-library(fgsea)
-library(ggplot2)
-library(ALL)
-library(Rtsne)
 library(class)
 library(e1071)
 library(party)
 library(nnet)
-library(randomForest)
-library(data.table)
 library(caret)
-library(GOstats)
 ```
 
 
@@ -80,7 +63,7 @@ library(GOstats)
 
 # Pré-processamento dos dados
 
-...
+Para o pré-processamento verificámos a existência de valores omissos, obtemos os metadados do dataset , preparámos o dataframe a ser usado com o objeto Expression Set e foi feita uma filtragem dos dados,  usando um flat pattern nos genes cujo desvio padrão dos valores de expressão é maior do que duas vezes a mediana dos desvios padrão de todos os genes.
 
 ```{r}
 sum(is.na(GDS5826)) # soma o numero de NAs
@@ -112,13 +95,16 @@ abline(v=m, col="blue",lwd = 4,lty = 2)
 abline(v=m*2, col="red",lwd = 4,lty = 2)
 datar = data[sds >=3*median(sds), ]
 
+
 ```
 
 
 
 
 
-## Analise diferencial
+# Analise diferencial
+
+
 ```{r}
 datar@annotation='hgu133plus2'
 datar$cell.type= factor(datar$cell.type)
@@ -134,7 +120,7 @@ tt$p.value[p20]
 ```
 
 
-Lista de 20 genes
+##Lista de 20 genes com menor p-value
 
 ```{r}
 g = featureNames(datar[p20])
@@ -142,20 +128,25 @@ g
 unlist(mget(g, hgu133plus2SYMBOL))
 ```
 
-Heatmap
+##Heatmap
 
+Nesta etapa contruímos também um heatmap e um pheatmap comparando a expressão destes 20 genes  com maior evidência de expressão diferencial, parecendo mostar que o grupo de células resistentes apresenta uma maior heterogeneidade na expressão dos genes. Com o pheatmap conseguimos salientar uma alta sobexpressão do gene CAPN2 e uma alta sobreexpressão do gene BCAT1 na linha de células resistentes ao fármaco. No caso da linha de células parentais é também evidente uma sobreexpressão do gene CCND1.
 
 ```{r}
 data20=datar[p20,]
 order_cols = order(data20$cell.type)
-order_cols
 data20 =data20[,order_cols]
-heatmap(exprs(data20), Colv = NA, labCol = data20$cell.type)
-
+heatmap(exprs(data20), labCol = data20$cell.type)
+pheatmap::pheatmap(exprs(data20), labels_col = data20$cell.type )
 ```
 
 
+
+
 ##Enriquecimento
+
+De seguida quisemos verificar se no nosso conjunto de genes existe
+“enriquecimento” estatisticamente significativo nos genes destes conjuntos usando testes hipergemétricos. No final conseguimos uma lista de 14 genes e as suas funções principais. 
 
 ```{r}
 
@@ -186,7 +177,9 @@ summary(hgOver)
 ```
 
 
-##Analise preditiva
+#Análise preditiva
+
+Para a análise preditiva foi realizado o treino de diferentes modelos (knn, redes neurais e árvores de decisão) usando diferentes métodos, com o objetivo de prever se uma linha de células é resistente ou não ao fármaco utilizado. Foi feita uma segunda filtragem a estes dados usando um modelo de regressão linear para usar apenas um subconjunto de modo a não ser criado ruído durande a tarefa dos algoritmos usando milhares de dados.
 ```{r}
 #Filtragem do conjunto de dados
 
@@ -198,6 +191,8 @@ indexes = which(rownames(datar)%in%rownames(diff))
 datacl = datar[indexes,]
 ```
 
+##Criação dos grupos de treino e de teste
+
 ```{r}
 train = t(exprs(datacl[1:77,]))
 test = t(exprs(datacl[78:100,]))
@@ -205,7 +200,11 @@ dim(train)
 dim(test)
 
 head(datacl)
+```
 
+##Método dos vizinhos mais próximos
+
+```{r}
 library(class)
 
 cl=datacl@phenoData@data[["cell.type"]]
@@ -219,6 +218,7 @@ pecc
 
 ```
 
+##Redes Neurais
 
 ```{r}
 set.seed(1234)
@@ -236,6 +236,7 @@ testScores(nnetResultLOO)
 ```
 
 
+##Árvores de decisão
 
 ```{r}
 library(caret)
@@ -247,9 +248,14 @@ arv$results$Accuracy
 
 ```
 
+A partir destes resultados conseguimos verificar que a rede neural usando um validação cruzada de Leave-One-Out  é o modelo que melhor se ajusta. Por isso, este seria o modelo utilizado no caso de querer fazer a previsão.
 
 
 
+#Conclusão
+
+Nas conclusões do artigo foi possível observar uma distinção na expressão dos genes em células resistenes e não resistentes a carfilzomibe  Ao longo do nosso trabalho foi possível observar essas mesmas diferenças.
 
 
+Concluindo, apesar de terem existido algumas dificuldades, conseguimos obter resultados que reforçam as conclusões obtidas pelo artigo.
 
