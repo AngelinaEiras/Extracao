@@ -1,8 +1,10 @@
 ---
 title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
-author: Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro - PG
+author: Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro -  PG
 date: "30/05/22"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Explicação dos dados, a sua origem e relevância
 
-Os dados selecionados são provenientes do estudo " Multiple myeloma cell lines with acquired resistance to chemotherapeutic agent carfilzomib " assumindo a designação GDS5826 na base de dados GEO do NCBI.
+Os dados selecionados são provenientes do estudo "Multiple myeloma cell lines with acquired resistance to chemotherapeutic agent carfilzomib" assumindo a designação GDS5826 na base de dados GEO do NCBI.
 
 Este estudo refere-se à análise das linhas de células inibidoras do proteasoma múltiplo resistente ao carfilzomibe (MM), onde as células KMS-11/Cfz e KMS-34/Cfz foram perfiladas para expressão genética após 1 semana de crescimento na ausência de carfilzomibe juntamente com as células parentais KMS-11 e KMS-34 que não tinham sido seleccionadas no fármaco (amostras triplicadas).
 
