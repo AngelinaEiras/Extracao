@@ -1,10 +1,11 @@
 ---
 title: "Grupo 6 - Trabalho prático de Extração de Conhecimento de Bases de Dados Biológicas"
-author: Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro -  PG
-date: "30/05/22"
+author: "Beatriz Silva - PG45465, Mariana Gonçalves - PG45472, Quitéria Pinheiro -  PG45968"
 output:
   html_document:
     df_print: paged
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -23,13 +24,6 @@ Os dados extraídos do dataset foram 12 amostras totais, das quais 6 são da lin
 
 
 
-## Obtenção dos dados
-
-```{r}
-GDS5826 <- getGEO('GDS5826', destdir=".")
-
-```
-
 ## Obtenção de packages do BioConductor
 
 ```{r package_installation, eval = FALSE, message=FALSE, results='hide'}
@@ -40,21 +34,41 @@ BiocManager::install("Biobase", force = TRUE)
 BiocManager::install("genefilter", force = TRUE)
 BiocManager::install("hgu133plus2.db")
 BiocManager::install("limma", force = TRUE)
+BiocManager::install(c("GOstats"))
+
+
+install.packages("devtools")
+library(devtools)
+install_github("tomesch/elasticsearch")
+library(elasticsearch)
 ```
 
 ## Carregamento de packages
 
 ```{r package_loading, message=FALSE, results='hide'}
+library(hgu133plus2.db)
+library(GOstats)
 library(car)
+library(GEOquery)
 library(limma)
 library(Biobase)
 library(genefilter)
 library(dplyr)
 library(class)
+library(MLInterfaces)
 library(e1071)
 library(party)
 library(nnet)
 library(caret)
+```
+
+
+
+## Obtenção dos dados
+
+```{r}
+GDS5826 <- getGEO('GDS5826', destdir=".")
+
 ```
 
 
@@ -82,7 +96,7 @@ class(data)
 Meta(GDS5826)
 ```
 
-##Flat pattens
+## Flat pattens
 
 ```{r}
 
@@ -122,7 +136,7 @@ tt$p.value[p20]
 ```
 
 
-##Lista de 20 genes com menor p-value
+## Lista de 20 genes com menor p-value
 
 ```{r}
 g = featureNames(datar[p20])
@@ -130,7 +144,7 @@ g
 unlist(mget(g, hgu133plus2SYMBOL))
 ```
 
-##Heatmap
+## Heatmap
 
 Nesta etapa contruímos também um heatmap e um pheatmap comparando a expressão destes 20 genes  com maior evidência de expressão diferencial, parecendo mostar que o grupo de células resistentes apresenta uma maior heterogeneidade na expressão dos genes. Com o pheatmap conseguimos salientar uma alta sobexpressão do gene CAPN2 e uma alta sobreexpressão do gene BCAT1 na linha de células resistentes ao fármaco. No caso da linha de células parentais é também evidente uma sobreexpressão do gene CCND1.
 
@@ -145,13 +159,12 @@ pheatmap::pheatmap(exprs(data20), labels_col = data20$cell.type )
 
 
 
-##Enriquecimento
+## Enriquecimento
 
 De seguida quisemos verificar se no nosso conjunto de genes existe
 “enriquecimento” estatisticamente significativo nos genes destes conjuntos usando testes hipergemétricos. No final conseguimos uma lista de 14 genes e as suas funções principais. 
 
 ```{r}
-
 filt = nsFilter(datar, require.entrez=T, remove.dupEntrez=T,
 var.func=IQR, var.cutoff=0.5, feature.exclude="^AFFX")
 dataf = filt$eset
@@ -179,9 +192,9 @@ summary(hgOver)
 ```
 
 
-#Análise preditiva
+# Análise preditiva
 
-Para a análise preditiva foi realizado o treino de diferentes modelos (knn, redes neurais e árvores de decisão) usando diferentes métodos, com o objetivo de prever se uma linha de células é resistente ou não ao fármaco utilizado. Foi feita uma segunda filtragem a estes dados usando um modelo de regressão linear para usar apenas um subconjunto de modo a não ser criado ruído durande a tarefa dos algoritmos usando milhares de dados.
+Para a análise preditiva foi realizado o treino de diferentes modelos (knn, redes neuronais e árvores de decisão) usando diferentes métodos, com o objetivo de prever se uma linha de células é resistente ou não ao fármaco utilizado. Foi feita uma segunda filtragem a estes dados usando um modelo de regressão linear para usar apenas um subconjunto de modo a não ser criado ruído durande a tarefa dos algoritmos usando milhares de dados.
 ```{r}
 #Filtragem do conjunto de dados
 
@@ -193,7 +206,7 @@ indexes = which(rownames(datar)%in%rownames(diff))
 datacl = datar[indexes,]
 ```
 
-##Criação dos grupos de treino e de teste
+## Criação dos grupos de treino e de teste
 
 ```{r}
 train = t(exprs(datacl[1:77,]))
@@ -204,7 +217,7 @@ dim(test)
 head(datacl)
 ```
 
-##Método dos vizinhos mais próximos
+## Método dos vizinhos mais próximos
 
 ```{r}
 library(class)
@@ -220,11 +233,10 @@ pecc
 
 ```
 
-##Redes Neurais
+## Redes Neuronais
 
 ```{r}
 set.seed(1234)
-library(MLInterfaces)
 
 nnetResultLOO <- MLearn(cell.type~., datacl, nnetI, xvalSpec("LOO"),
 size=6, decay=0.01)
@@ -238,7 +250,7 @@ testScores(nnetResultLOO)
 ```
 
 
-##Árvores de decisão
+## Árvores de decisão
 
 ```{r}
 library(caret)
@@ -254,9 +266,9 @@ A partir destes resultados conseguimos verificar que a rede neural usando um val
 
 
 
-#Conclusão
+# Conclusão
 
-Nas conclusões do artigo foi possível observar uma distinção na expressão dos genes em células resistenes e não resistentes a carfilzomibe  Ao longo do nosso trabalho foi possível observar essas mesmas diferenças.
+Nas conclusões do artigo foi possível observar uma distinção na expressão dos genes em células resistenes e não resistentes a carfilzomibe.  Ao longo do nosso trabalho foi possível observar essas mesmas diferenças.
 
 
 Concluindo, apesar de terem existido algumas dificuldades, conseguimos obter resultados que reforçam as conclusões obtidas pelo artigo.
